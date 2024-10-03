@@ -1,0 +1,36 @@
+#!/usr/bin/env bash
+# bin/compile <build-dir> <cache-dir> <env-dir>
+
+set -euo pipefail
+
+function indent() {
+  c='s/^/       /'
+  case $(uname) in
+    Darwin) sed -l "$c";;
+    *)      sed -u "$c";;
+  esac
+}
+
+AZCOPY_URL="https://aka.ms/downloadazcopy-v10-linux"
+
+BUILD_DIR=$1
+INSTALL_DIR="/app/.azcopy"
+TMP_DIR=$(mktemp -d)
+
+echo "-----> Downloading azcopy"
+curl --silent --show-error --fail -L -o "${TMP_DIR}/azcopy.tar.gz" "${AZCOPY_URL}" |& indent
+tar --strip-components=1 -xvzf "${TMP_DIR}/azcopy.tar.gz" -C "${TMP_DIR}" |& indent
+
+echo "-----> Installing azcopy"
+mkdir -p "${BUILD_DIR}/.azcopy"
+cp "${TMP_DIR}/azcopy" "${BUILD_DIR}/.azcopy/" |& indent
+"${BUILD_DIR}/.azcopy/azcopy" --version |& indent
+
+mkdir -p "${BUILD_DIR}/.profile.d"
+cat > "${BUILD_DIR}/.profile.d/azcopy.sh" <<'PROFILE'
+export PATH="/app/.azcopy:${PATH}"
+PROFILE
+
+rm -rf "${TMP_DIR}"
+
+echo "-----> Successfully installed azcopy"
